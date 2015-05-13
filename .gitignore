@@ -1,0 +1,14 @@
+*.pyc
+*.log
+*.lprof
+
+
+/bin
+/include
+/lib
+/local
+/Scripts
+
+# idea files #
+.idea/
+*.iml
