@@ -46,3 +46,14 @@ $ pip freeze > requirements.txt
 
 if the model has changed update it.
 
+# notes
+
+https://docs.python.org/3.4/library/concurrent.futures.html#threadpoolexecutor
+
+http://dawa.aws.dk/replikering/adresser/haendelser?id=0a3f50b3-7253-32b8-e044-0003ba298018
+http://dawa.aws.dk/adgangsadresser?id=0a3f5084-5dd8-32b8-e044-0003ba298018
+http://dawa.aws.dk/replikering/adgangsadresser/haendelser?id=0a3f5084-5dd8-32b8-e044-0003ba298018
+http://dawa.aws.dk/replikering/postnumre/haendelser
+http://dawa.aws.dk/replikering/adresser/haendelser?sekvensnummerfra=15000&sekvensnummertil=20000
+http://dawa.aws.dk/replikering/adgangsadresser/haendelser?sekvensnummerfra=15000&sekvensnummertil=20000
+http://dawa.aws.dk/replikeringdok
