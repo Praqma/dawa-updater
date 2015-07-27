@@ -1,6 +1,6 @@
 from peewee import *
 
-database = MySQLDatabase('sammy', **{'user': 'root'})
+database = MySQLDatabase('sammy_clean', **{'user': 'root', 'password': 'root'})
 
 class UnknownField(object):
     pass
@@ -181,13 +181,9 @@ class SamRoute(BaseModel):
         db_table = 'sam_route'
         primary_key = CompositeKey('areaid', 'districtno', 'organisationid', 'routeid')
 
-# class Updates(BaseModel):
-#     date = DateTimeField(null=True)
-#     eventid = PrimaryKeyField(db_column='eventId')
-#     operation = CharField(null=True)
-#     success = UnknownField(null=True)  # bit
-#     type = CharField(null=True)
-#
-#     class Meta:
-#         db_table = 'updates'
-#
+class Updates(BaseModel):
+    sekvensnummer = CharField(primary_key=True)
+    tidspunkt = DateTimeField()
+
+    class Meta:
+        db_table = 'updates'
