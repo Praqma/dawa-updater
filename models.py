@@ -58,7 +58,7 @@ class SamDistrict(BaseModel):
 
 class SamHouseunits(BaseModel):
     adgangsadresse_uuid = CharField(db_column='ADGANGSADRESSE_UUID', unique=True)
-    doorcount = DecimalField(db_column='DOORCOUNT', null=True)
+    doorcount = DecimalField(db_column='DOORCOUNT', null=True, default=1)
     equalno = DecimalField(db_column='EQUALNO', null=True)
     houseid = CharField(db_column='HOUSEID')
     kommuneid = DecimalField(db_column='KOMMUNEID')
