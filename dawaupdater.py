@@ -271,6 +271,9 @@ def import_address_information():
                 message = template.format(type(e).__name__, e.args, e)
                 print(message)
 
+def update_address_information():
+    pass
+
 
 def initialize(is_update):
     def get_current_sequence_number():
@@ -310,7 +313,7 @@ def initialize(is_update):
 
         sekvensnummertil = update['sekvensnummer']
 
-        update = Updates.select().order_by(Updates.tidspunkt.desc()).limit(1).excecute()
+        update = Updates.select().order_by(Updates.tidspunkt.desc()).limit(1).execute()
         sekvensnummerfra = update.sekvensnummer
 
         return [
@@ -337,7 +340,6 @@ def initialize(is_update):
 
     def prepare_data_files_for_initial_import():
         update = get_current_sequence_number()
-        # update['sekvensnummer'] = 1420000
         tempdata.append_or_save({'update_to_register': update})
 
         sekvensnummer = update['sekvensnummer']
@@ -397,14 +399,19 @@ def register_update():
 
     print('done')
 
-
 def main():
-    initialize(is_update=False)
+    is_update = True
+
+    initialize(is_update)
 
     # import_commune_information()
     # import_area_information()
 
-    import_address_information()
+    if is_update:
+        update_address_information()
+    else:
+        import_address_information()
+
     register_update()
 
     print('donedone')
