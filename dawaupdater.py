@@ -33,10 +33,6 @@ import tempdata
 
 SERVER_URL = 'http://dawa.aws.dk/'
 
-_LOGGING_CONFIG = os.path.join(os.path.dirname(__file__), "logging.ini")
-logging.config.fileConfig(_LOGGING_CONFIG)
-
-
 def import_commune_information():
     def get_communes():
         response = requests.get(SERVER_URL + 'kommuner')
@@ -417,7 +413,7 @@ def initialize(is_update):
         update = get_current_sequence_number()
 
         update['sekvensnummer'] = 1420000
-        
+
         tempdata.append_or_save({'update_to_register': update})
 
         sekvensnummer = update['sekvensnummer']
