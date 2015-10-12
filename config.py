@@ -1,3 +1,5 @@
+CHUNK_SIZE = 20000
+
 TEMP_DATA_FILE = 'tempdata.json'
 
 DATA_FILE_FOLDER = 'dawadata'

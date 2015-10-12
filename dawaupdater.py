@@ -12,23 +12,23 @@ Options:
   update        is used for updating the data
 """
 from builtins import print
-from models import *
-from docopt import docopt
 import logging.config
-import os
+import json
 import time
+import concurrent.futures
+import csv
+from queue import Queue
+import pprint
+
+from models import *
+import os
 import re
 import requests
-import concurrent.futures
-import threading
-import csv
 import pyproj
-from queue import Queue
 from services.VejstykkerService import VejstykkerService
 from services.AddressService import AddressService
 import config
 import shutil
-import pprint
 import tempdata
 
 SERVER_URL = 'http://dawa.aws.dk/'
@@ -110,7 +110,6 @@ def import_area_information():
 
 def import_address_information():
     print('importing address info')
-    CHUNK_SIZE = 20000
 
     process_queue = Queue()
     write_queue = Queue()
@@ -136,7 +135,7 @@ def import_address_information():
 
                 last_index = index
 
-                if index != 0 and index % CHUNK_SIZE == 0:
+                if index != 0 and index % config.CHUNK_SIZE == 0:
                     process_queue.put(output)
                     print('process queue: item added; size: {0}'.format(process_queue.qsize()))
                     output = []
@@ -155,6 +154,9 @@ def import_address_information():
                 if valid_address:
                     output.append(address)
 
+            if output:
+                process_queue.put(output)
+
         print('ending address reading. Last index {0}'.format(last_index))
         return 'reading address data done.'
 
@@ -170,7 +172,7 @@ def import_address_information():
             addresses = process_queue.get()
 
             for index, address in enumerate(addresses):
-                if index != 0 and (index+1) % CHUNK_SIZE == 0:
+                if index != 0 and (index+1) % config.CHUNK_SIZE == 0:
                     write_queue.put(output)
                     output = []
 
@@ -272,8 +274,81 @@ def import_address_information():
                 print(message)
 
 def update_address_information():
-    pass
+    print('updating address info')
 
+    process_queue = Queue()
+    write_queue = Queue()
+
+    print('starting services...')
+    # vejstykker_service = VejstykkerService()
+    # address_service = AddressService()
+    print('done')
+    from pprint import pprint
+
+    def read_address_update_events():
+        print('reading address update events...')
+
+        last_index = 0
+
+        with open(config.ADDRESS_ACCESS_DATA_UPDATES, encoding='utf-8') as jsonfile:
+            output = []
+
+            address_updates = json.loads(jsonfile.read())
+
+            for index, e in enumerate(address_updates):
+                valid_address = True
+
+                last_index = index
+
+                if index != 0 and index % config.CHUNK_SIZE == 0:
+                    process_queue.put(output)
+                    print('process queue: item added; size: {0}'.format(process_queue.qsize()))
+                    output = []
+                    while process_queue.qsize() >= 10:
+                        print('Process queue full')
+                        time.sleep(30)
+
+                needed_keys = ['id', 'kommunekode', 'vejkode', 'husnr', 'postnr', 'etrs89koordinat_øst', 'etrs89koordinat_nord']
+                data = {key: e['data'][key] for key in e['data'] if key in needed_keys}
+
+                for v in data.values():
+                    if not v:
+                        valid_address = False
+                        break
+
+                event = {'operation': e['operation'], 'data': data}
+                if valid_address:
+                    output.append(event)
+
+            if output:
+                process_queue.put(output)
+
+        print('ending address update event reading. Last index {0}'.format(last_index))
+        return 'reading address update event data done.'
+
+    print(read_address_update_events())
+
+    address_update_events = process_queue.get()
+
+    for event in address_update_events:
+        if event['operation'] == 'update':
+            data = event['data']
+            try:
+                record = SamHouseunits.get(SamHouseunits.adgangsadresse_uuid == data['id'])
+            except Exception as e:
+                pprint(e)
+                continue
+
+            print('---------record---------')
+            pprint(record.houseid)
+            pprint(record.adgangsadresse_uuid)
+            pprint(record.kommuneid)
+            pprint(record.zip)
+            pprint(record.roadid)
+            print('--------------------------')
+            print('---------data---------')
+            pprint(data)
+            print('--------------------------')
 
 def initialize(is_update):
     def get_current_sequence_number():
@@ -313,7 +388,7 @@ def initialize(is_update):
 
         sekvensnummertil = update['sekvensnummer']
 
-        update = Updates.select().order_by(Updates.tidspunkt.desc()).limit(1).execute()
+        update = Updates.select().order_by(Updates.tidspunkt.desc()).limit(1).get()
         sekvensnummerfra = update.sekvensnummer
 
         return [
@@ -340,6 +415,9 @@ def initialize(is_update):
 
     def prepare_data_files_for_initial_import():
         update = get_current_sequence_number()
+
+        update['sekvensnummer'] = 1420000
+        
         tempdata.append_or_save({'update_to_register': update})
 
         sekvensnummer = update['sekvensnummer']
@@ -400,7 +478,7 @@ def register_update():
     print('done')
 
 def main():
-    is_update = True
+    is_update = False
 
     initialize(is_update)
 
