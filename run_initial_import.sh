@@ -1,3 +1,3 @@
 source ./bin/activate
 
-python dawaupdater.py > stdout 2> stderr
+python dawaupdater.py freshimport > stdout 2> stderr
