@@ -363,7 +363,7 @@ def update_address_information():
 
 
 def initialize(is_update):
-    def get_current_sequence_number():
+    def get_current_update():
         response = requests.get('http://dawa.aws.dk/replikering/senestesekvensnummer')
         return response.json()
 
@@ -395,7 +395,7 @@ def initialize(is_update):
                     print(message)
 
     def prepare_update_data_files():
-        update = get_current_sequence_number()
+        update = get_current_update()
         tempdata.append_or_save({'update_to_register': update})
 
         sekvensnummertil = update['sekvensnummer']
@@ -426,7 +426,7 @@ def initialize(is_update):
         ]
 
     def prepare_data_files_for_initial_import():
-        update = get_current_sequence_number()
+        update = get_current_update()
 
         update['sekvensnummer'] = 1420000
 
@@ -498,15 +498,39 @@ def register_update():
 
     print('done')
 
+def updates_available():
+    print('checking for updates...')
+
+    response = requests.get('http://dawa.aws.dk/replikering/senestesekvensnummer')
+    update = response.json()
+
+    sekvensnummertil = update['sekvensnummer']
+
+    update = Updates.select().order_by(Updates.tidspunkt.desc()).limit(1).get()
+    sekvensnummerfra = int(update.sekvensnummer)
+
+    print('sekvensnummerfra: {0}; sekvensnummertil: {1}'.format(sekvensnummerfra, sekvensnummertil))
+
+    output = True
+
+    if sekvensnummerfra == sekvensnummertil:
+        print('no updates found')
+        output = False
+    else:
+        print('found {0} update events'.format(sekvensnummertil - sekvensnummerfra))
+
+    return output
 
 def main(arguments):
     is_update = arguments['update']
+    is_freshimport = arguments['freshimport']
 
-    initialize(is_update)
-
-    if is_update:
+    if is_update and updates_available():
+        initialize(is_update)
         update_address_information()
-    else:
+
+    if is_freshimport:
+        initialize(is_update)
         import_commune_information()
         import_area_information()
         import_address_information()
