@@ -428,8 +428,6 @@ def initialize(is_update):
     def prepare_data_files_for_initial_import():
         update = get_current_update()
 
-        update['sekvensnummer'] = 1420000
-
         tempdata.append_or_save({'update_to_register': update})
 
         sekvensnummer = update['sekvensnummer']
