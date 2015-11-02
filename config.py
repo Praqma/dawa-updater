@@ -1,4 +1,25 @@
+import sys
+import os
+
 CHUNK_SIZE = 20000
+
+if "DATABASE_NAME" in os.environ:
+    DATABASE_NAME = os.environ['DATABASE_NAME']
+else:
+    print('environment variable [DATABASE_NAME] not found')
+    sys.exit(1)
+
+if "DATABASE_USER" in os.environ:
+    DATABASE_USER = os.environ['DATABASE_USER']
+else:
+    print('environment variable [DATABASE_USER] not found')
+    sys.exit(1)
+
+if "DATABASE_PASSWORD" in os.environ:
+    DATABASE_PASSWORD = os.environ['DATABASE_PASSWORD']
+else:
+    print('environment variable [DATABASE_PASSWORD] not found')
+    sys.exit(1)
 
 TEMP_DATA_FILE = 'tempdata.json'
 
