@@ -18,6 +18,8 @@ pulls address data from DAWA and pushes it to the RUT database
 
 7. After activating the environment use PIP to install the dependencies by running `$ pip install -r requirements.txt`. If the dependencies have been changed update the requirements file by running `$ pip freeze > requirements.txt`
 
+8. For the application to run it needs information about the database. There are 3 environmental variables that it will look for. `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`.
+
 ##### How to regenerate the database models
 In case the database schema has changed, the model class needs to be regenerated. 
 The process is described in on this website.
@@ -25,6 +27,8 @@ The process is described in on this website.
 `http://peewee.readthedocs.org/en/latest/peewee/playhouse.html#pwiz`
 
 ###	Executing the application 
+
+
 
 The application can be ran in two different modes. 
 
