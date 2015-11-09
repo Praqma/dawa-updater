@@ -3,6 +3,12 @@ import os
 
 CHUNK_SIZE = 20000
 
+if "DATABASE_HOST" in os.environ:
+    DATABASE_HOST = os.environ['DATABASE_HOST']
+else:
+    print('environment variable [DATABASE_HOST] not found')
+    sys.exit(1)
+
 if "DATABASE_NAME" in os.environ:
     DATABASE_NAME = os.environ['DATABASE_NAME']
 else:
