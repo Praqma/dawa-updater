@@ -75,7 +75,6 @@ def create_houseunit(data):
 
     return houseunit
 
-
 def import_commune_information():
     print('importing commune information...')
 
@@ -170,7 +169,10 @@ def freshimport():
 
         next(reader)  # skip header
 
-        for row in enumerate(reader):
+        for index, row in enumerate(reader):
+            if index % 10000 == 0:
+                print('records read: {0}'.format(index))
+
             valid_address = True
 
             address = {'id': row[0], 'kommunekode': row[2], 'vejkode': row[3], 'husnr': row[4], 'postnr': row[6],
