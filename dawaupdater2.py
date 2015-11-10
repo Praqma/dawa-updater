@@ -414,10 +414,6 @@ def updates_available():
     return output
 
 def main(arguments):
-    initialize(False)
-    import_address_information()
-    return
-
     is_update = arguments['update']
     is_freshimport = arguments['freshimport']
 
