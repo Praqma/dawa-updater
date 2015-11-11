@@ -39,6 +39,7 @@ address_service = None
 
 SERVER_URL = 'http://dawa.aws.dk/'
 
+
 def import_commune_information():
     print('importing commune information...')
 
@@ -125,6 +126,7 @@ def import_area_information():
         executor.submit(SamArea.insert_many(get_parishes()).execute())
         executor.submit(SamArea.insert_many(get_electoral_districts()).execute())
 
+
 def create_houseunit(data):
     houseunit = {}
 
@@ -163,6 +165,7 @@ def create_houseunit(data):
 
     return houseunit
 
+
 def freshimport():
     print('importing address info')
 
@@ -190,6 +193,7 @@ def freshimport():
                 SamHouseunits.create(**houseunit)
 
     print('done importing address info')
+
 
 def update_address_information():
     print('updating address info')
@@ -258,6 +262,7 @@ def update_address_information():
             event_handler(event)
 
     print('done updating')
+
 
 def initialize(is_update):
     def get_current_update():
@@ -381,6 +386,7 @@ def initialize(is_update):
     address_service = AddressService()
     print('done')
 
+
 def register_update():
     print('registering an update...')
 
@@ -391,6 +397,7 @@ def register_update():
     Updates.create(**update)
 
     print('done')
+
 
 def updates_available():
     print('checking for updates...')
@@ -415,6 +422,7 @@ def updates_available():
 
     return output
 
+
 def main(arguments):
     is_update = arguments['update']
     is_freshimport = arguments['freshimport']
@@ -432,6 +440,7 @@ def main(arguments):
     register_update()
 
     print('donedone')
+
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)

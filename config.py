@@ -1,8 +1,6 @@
 import sys
 import os
 
-CHUNK_SIZE = 20000
-
 if "DATABASE_HOST" in os.environ:
     DATABASE_HOST = os.environ['DATABASE_HOST']
 else:
