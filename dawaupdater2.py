@@ -37,43 +37,7 @@ etrs89 = pyproj.Proj(init='epsg:25832')
 vejstykker_service = None
 address_service = None
 
-def create_houseunit(data):
-    houseunit = {}
-
-    houseunit['adgangsadresse_uuid'] = data['id']
-    houseunit['kommuneid'] = data['kommunekode']
-
-    houseunit['roadid'] = data['vejkode']
-    houseunit['roadname'] = vejstykker_service.get_road_name_from_road_id_and_commune_id(data['vejkode'],
-                                                                                         data['kommunekode'])
-
-    house_id = data['husnr']
-    houseunit['houseid'] = house_id
-
-    house_number = re.findall(r'\d+', house_id)[0]
-    if int(house_number) % 2 == 0:
-        houseunit['equalno'] = 1
-    else:
-        houseunit['equalno'] = 0
-
-    x = data['etrs89koordinat_øst']
-    y = data['etrs89koordinat_nord']
-
-    wgs84_coordinates = pyproj.transform(etrs89, wgs84, x, y)
-    houseunit['x'] = wgs84_coordinates[0]
-    houseunit['y'] = wgs84_coordinates[1]
-
-    houseunit['doorcount'] = address_service.get_door_count_from_adgangsadresseid(data['id'])
-    houseunit['zip'] = data['postnr']
-
-    parish = address_service.get_parish_from_adgangsadresseid(data['id'])
-    houseunit['sognenr'] = parish['kode']
-    houseunit['sognenavn'] = parish['navn']
-
-    valgkredskode = address_service.get_political_district_id_from_adgangsadresseid(data['id'])
-    houseunit['valgkreds'] = valgkredskode
-
-    return houseunit
+SERVER_URL = 'http://dawa.aws.dk/'
 
 def import_commune_information():
     print('importing commune information...')
@@ -161,6 +125,44 @@ def import_area_information():
         executor.submit(SamArea.insert_many(get_parishes()).execute())
         executor.submit(SamArea.insert_many(get_electoral_districts()).execute())
 
+def create_houseunit(data):
+    houseunit = {}
+
+    houseunit['adgangsadresse_uuid'] = data['id']
+    houseunit['kommuneid'] = data['kommunekode']
+
+    houseunit['roadid'] = data['vejkode']
+    houseunit['roadname'] = vejstykker_service.get_road_name_from_road_id_and_commune_id(data['vejkode'],
+                                                                                         data['kommunekode'])
+
+    house_id = data['husnr']
+    houseunit['houseid'] = house_id
+
+    house_number = re.findall(r'\d+', house_id)[0]
+    if int(house_number) % 2 == 0:
+        houseunit['equalno'] = 1
+    else:
+        houseunit['equalno'] = 0
+
+    x = data['etrs89koordinat_øst']
+    y = data['etrs89koordinat_nord']
+
+    wgs84_coordinates = pyproj.transform(etrs89, wgs84, x, y)
+    houseunit['x'] = wgs84_coordinates[0]
+    houseunit['y'] = wgs84_coordinates[1]
+
+    houseunit['doorcount'] = address_service.get_door_count_from_adgangsadresseid(data['id'])
+    houseunit['zip'] = data['postnr']
+
+    parish = address_service.get_parish_from_adgangsadresseid(data['id'])
+    houseunit['sognenr'] = parish['kode']
+    houseunit['sognenavn'] = parish['navn']
+
+    valgkredskode = address_service.get_political_district_id_from_adgangsadresseid(data['id'])
+    houseunit['valgkreds'] = valgkredskode
+
+    return houseunit
+
 def freshimport():
     print('importing address info')
 
@@ -170,7 +172,7 @@ def freshimport():
         next(reader)  # skip header
 
         for index, row in enumerate(reader):
-            if index % 10000 == 0:
+            if index % 50000 == 0:
                 print('records read: {0}'.format(index))
 
             valid_address = True
@@ -393,7 +395,7 @@ def register_update():
 def updates_available():
     print('checking for updates...')
 
-    response = requests.get('http://dawa.aws.dk/replikering/senestesekvensnummer')
+    response = requests.get('{0}replikering/senestesekvensnummer'.format(SERVER_URL))
     update = response.json()
 
     sekvensnummertil = update['sekvensnummer']
@@ -425,7 +427,7 @@ def main(arguments):
         initialize(is_update)
         import_commune_information()
         import_area_information()
-        import_address_information()
+        freshimport()
 
     register_update()
 
