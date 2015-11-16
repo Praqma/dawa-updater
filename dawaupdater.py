@@ -430,14 +430,14 @@ def main(arguments):
     if is_update and updates_available():
         initialize(is_update)
         update_address_information()
+        register_update()
 
     if is_freshimport:
         initialize(is_update)
         import_commune_information()
         import_area_information()
         freshimport()
-
-    register_update()
+        register_update()
 
     print('donedone')
 
