@@ -229,8 +229,14 @@ def update_address_information():
             print("pymysql integrity error")
             return
         finally:
-            print("finnaly creating")
-            SamHouseunits.create(**houseunit)
+            try:
+                SamHouseunits.create(**houseunit)
+            except peewee.IntegrityError:
+                print("peewee integrity error")
+                return
+            except pymysql.err.IntegrityError:
+                print("pymysql integrity error")
+                return
 
     def handle_delete_event(event):
         print('deleting record {0}'.format(event['data']['id']))
