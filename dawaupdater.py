@@ -22,6 +22,7 @@ from pprint import pprint
 
 from models import *
 import os
+import peewee
 import re
 import requests
 import pyproj
@@ -30,6 +31,7 @@ from services.AddressService import AddressService
 import config
 import shutil
 import tempdata
+import pymysql.err
 
 wgs84 = pyproj.Proj(init='epsg:4326')
 etrs89 = pyproj.Proj(init='epsg:25832')
@@ -220,9 +222,14 @@ def update_address_information():
             record.delete_instance()
         except DoesNotExist:
             print('record is not found for updates so it will be created')
-        except IntegrityError:
+        except peewee.IntegrityError:
+            print("peewee integrity error")
+            return
+        except pymysql.err.IntegrityError:
+            print("pymysql integrity error")
             return
         finally:
+            print("finnaly creating")
             SamHouseunits.create(**houseunit)
 
     def handle_delete_event(event):
