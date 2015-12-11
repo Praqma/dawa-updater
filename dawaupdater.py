@@ -220,6 +220,8 @@ def update_address_information():
             record.delete_instance()
         except DoesNotExist:
             print('record is not found for updates so it will be created')
+        except IntegrityError:
+            return
         finally:
             SamHouseunits.create(**houseunit)
 
