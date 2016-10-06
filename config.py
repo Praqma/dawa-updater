@@ -20,7 +20,7 @@ else:
     sys.exit(1)
 
 if "DATABASE_PASSWORD" in os.environ:
-    DATABASE_PASSWORD = os.environ['DATABASE_PASSWORD']
+    DATABASE_PASSWORD = os.environ['DATABASE_PASSWORD']    
 else:
     print('environment variable [DATABASE_PASSWORD] not found')
     sys.exit(1)

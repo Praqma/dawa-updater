@@ -6,9 +6,12 @@
 Usage:
   dawaupdater.py freshimport
   dawaupdater.py update
+  dawaupdater.py list-obsolete-parish
+  dawaupdater.py import-new-parish
 
 Options:
   -h --help     Show this screen.
+  update-parish List parishes
   freshimport   used to establish a fresh local copy of the data
   update        is used for updating the data
 """
@@ -56,6 +59,58 @@ def import_commune_information():
 
     print('done.')
 
+def get_parishes():
+    response = requests.get(SERVER_URL + 'sogne')
+    data = response.json()
+
+    for e in data:
+        url = SERVER_URL + 'adgangsadresser'
+        parameters = {'sognekode': e['kode'], 'side': 1, 'per_side': 1}
+        response = requests.get(url, params=parameters)
+        if response.json():
+            kommune_id = response.json()[0]['kommune']['kode']
+
+        yield {'areacode': int(e['kode']), 'areaname': e['navn'],
+               'areatypeid': 'SOGN', 'kommuneid': int(kommune_id),
+               'areaid': "{0}{1}".format('SOGN', int(e['kode']))}
+
+    print('done importing parishes')
+
+
+#Calculates the parishes in that are on the webservice but NOT in the database. 
+#This is new parishes we can safely insert
+def get_new_parish_from_dawa():
+    added = []
+    response = requests.get(SERVER_URL + 'sogne')
+    data = response.json()
+
+    for e in data:
+        if e['kode']:
+            try:
+                found = SamArea.get(SamArea.areaid == 'SOGN'+e['kode'])
+            except DoesNotExist as dne:
+                added.append('SOGN'+e['kode'])
+
+    return added
+
+
+#Calculates the parises in that are in the database but not on the dawa api
+#These need to be individually evaluted. We can basically just print them to console
+def get_obsolete_parish():
+    renamed = []
+    response = requests.get(SERVER_URL + 'sogne')
+    data = response.json()
+    database_rows = SamArea.select().where(SamArea.areaid.contains("SOGN")).execute()
+    for dbr in database_rows:
+        found  = False
+        for dawadata in data:        
+            if(dawadata['kode'] in dbr.areaid):
+                found = True                
+                break
+        if not found:                
+            renamed.append(dbr.areaid)
+    return renamed
+
 
 def import_area_information():
     print('importing area information...')
@@ -94,22 +149,6 @@ def import_area_information():
 
         print('done importing postal districts')
 
-    def get_parishes():
-        response = requests.get(SERVER_URL + 'sogne')
-        data = response.json()
-
-        for e in data:
-            url = SERVER_URL + 'adgangsadresser'
-            parameters = {'sognekode': e['kode'], 'side': 1, 'per_side': 1}
-            response = requests.get(url, params=parameters)
-            if response.json():
-                kommune_id = response.json()[0]['kommune']['kode']
-
-            yield {'areacode': int(e['kode']), 'areaname': e['navn'],
-                   'areatypeid': 'SOGN', 'kommuneid': int(kommune_id),
-                   'areaid': "{0}{1}".format('SOGN', int(e['kode']))}
-
-        print('done importing parishes')
 
     def get_electoral_districts():
         response = requests.get(SERVER_URL + 'opstillingskredse')
@@ -439,15 +478,29 @@ def updates_available():
 
 
 def main(arguments):
+
+    is_obsolete_parish = arguments['list-obsolete-parish']
+    is_list_new_parish = arguments['list-new-parish']
+    is_import_new_parish = arguments['import-new-parish']
     is_update = arguments['update']
     is_freshimport = arguments['freshimport']
 
-    if is_update and updates_available():
+    if is_obsolete_parish:
+        for pa in get_obsolete_parish():
+            print(pa)
+
+    if is_list_new_parish:
+        raise "Not implemented yet"
+
+    if  is_import_new_parish:
+        raise "Not implemented yet"
+
+    if is_update and not is_parish and updates_available():
         initialize(is_update)
         update_address_information()
         register_update()
 
-    if is_freshimport:
+    if is_freshimport and not is_parish:
         initialize(is_update)
         import_commune_information()
         import_area_information()
