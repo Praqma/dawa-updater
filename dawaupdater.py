@@ -8,12 +8,15 @@ Usage:
   dawaupdater.py update
   dawaupdater.py list-obsolete-parish
   dawaupdater.py import-new-parish
+  dawaupdater.py list-new-parish
 
 Options:
-  -h --help     Show this screen.
-  update-parish List parishes
-  freshimport   used to establish a fresh local copy of the data
-  update        is used for updating the data
+  -h --help             Show this screen.
+  update-parish         Update database with the new parishes
+  list-obsolete-parish  List obsolete parish
+  list-new-parish       List new parish 
+  freshimport           Used to establish a fresh local copy of the data
+  update                Is used for updating the data
 """
 
 from docopt import docopt
@@ -59,6 +62,37 @@ def import_commune_information():
 
     print('done.')
 
+#Updates parishes. Takes an Array of parishes in the form SOGNXXXX where XXXX is the parish code
+def update_parishes(dawa_parish_json, parishes = []):
+    print("Updating parishes with new parish data")
+    parishmap = {}
+    updatelist = []
+
+    for i in range(0, len(dawa_parish_json)):
+        parishmap[int(dawa_parish_json[i]['kode'])] = dawa_parish_json[i]
+
+
+    for parish in parishes:        
+        pString = int(parish[4:8])
+        url = SERVER_URL + 'adgangsadresser'
+        parameters = {'sognekode': pString, 'side': 1, 'per_side': 1}
+        response = requests.get(url, params=parameters)
+        if response.json():
+            kommune_id = response.json()[0]['kommune']['kode']
+
+        new_parish = {
+            'areacode': pString, 
+            'areaname': parishmap[pString]['navn'],
+            'areatypeid': 'SOGN',
+            'kommuneid': int(kommune_id),
+            'areaid': "{0}{1}".format('SOGN', pString)
+        }
+        print("Added %s" % new_parish)
+        updatelist.append(new_parish)
+
+    with database.atomic():
+        SamArea.insert_many(updatelist).execute()
+
 def get_parishes():
     response = requests.get(SERVER_URL + 'sogne')
     data = response.json()
@@ -70,33 +104,35 @@ def get_parishes():
         if response.json():
             kommune_id = response.json()[0]['kommune']['kode']
 
-        yield {'areacode': int(e['kode']), 'areaname': e['navn'],
-               'areatypeid': 'SOGN', 'kommuneid': int(kommune_id),
-               'areaid': "{0}{1}".format('SOGN', int(e['kode']))}
+        yield {
+        'areacode': int(e['kode']), 
+        'areaname': e['navn'],
+        'areatypeid': 'SOGN', 
+        'kommuneid': int(kommune_id),
+        'areaid': "{0}{1}".format('SOGN', int(e['kode']))
+        }
 
     print('done importing parishes')
 
 
 #Calculates the parishes in that are on the webservice but NOT in the database. 
 #This is new parishes we can safely insert
-def get_new_parish_from_dawa():
+def get_new_parish_from_dawa(dawa_parish_json = []):
+    print("Finding new parishes")
     added = []
-    response = requests.get(SERVER_URL + 'sogne')
-    data = response.json()
-
-    for e in data:
+    for e in dawa_parish_json:
         if e['kode']:
             try:
                 found = SamArea.get(SamArea.areaid == 'SOGN'+e['kode'])
             except DoesNotExist as dne:
+                print("WARNING: Found new area not imported %s" % ("SOGN"+e['kode'])
                 added.append('SOGN'+e['kode'])
-
     return added
-
 
 #Calculates the parises in that are in the database but not on the dawa api
 #These need to be individually evaluted. We can basically just print them to console
 def get_obsolete_parish():
+    print("Finding obsolete parishes")
     renamed = []
     response = requests.get(SERVER_URL + 'sogne')
     data = response.json()
@@ -107,7 +143,8 @@ def get_obsolete_parish():
             if(dawadata['kode'] in dbr.areaid):
                 found = True                
                 break
-        if not found:                
+        if not found:
+            print("WARNING: Found obsolete area %s - %s" % (dbr.areaid,dbr.areaname))                
             renamed.append(dbr.areaid)
     return renamed
 
@@ -175,8 +212,7 @@ def create_houseunit(data):
     houseunit['kommuneid'] = data['kommunekode']
 
     houseunit['roadid'] = data['vejkode']
-    houseunit['roadname'] = vejstykker_service.get_road_name_from_road_id_and_commune_id(data['vejkode'],
-                                                                                         data['kommunekode'])
+    houseunit['roadname'] = vejstykker_service.get_road_name_from_road_id_and_commune_id(data['vejkode'], data['kommunekode'])
 
     house_id = data['husnr']
     houseunit['houseid'] = house_id
@@ -490,12 +526,18 @@ def main(arguments):
             print(pa)
 
     if is_list_new_parish:
-        raise "Not implemented yet"
+        for newp in get_new_parish_from_dawa(): 
+            print(newp)
 
-    if  is_import_new_parish:
-        raise "Not implemented yet"
+    if is_import_new_parish:
+        #Get full list of parish from 
+        response = requests.get(SERVER_URL + 'sogne')
+        data = response.json()        
 
-    if is_update and not is_parish and updates_available():
+        parish_updates = get_new_parish_from_dawa(data)
+        update_parishes(data, parish_updates)
+
+    if is_update and updates_available():
         initialize(is_update)
         update_address_information()
         register_update()
@@ -507,7 +549,7 @@ def main(arguments):
         freshimport()
         register_update()
 
-    print('donedone')
+    print('Done using updater')
 
 
 if __name__ == '__main__':
