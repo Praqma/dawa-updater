@@ -522,18 +522,15 @@ def main(arguments):
     is_freshimport = arguments['freshimport']
 
     if is_obsolete_parish:
-        for pa in get_obsolete_parish():
-            print(pa)
+        get_obsolete_parish()            
 
     if is_list_new_parish:
-        for newp in get_new_parish_from_dawa(): 
-            print(newp)
-
-    if is_import_new_parish:
         #Get full list of parish from 
         response = requests.get(SERVER_URL + 'sogne')
-        data = response.json()        
+        data = response.json()          
+        get_new_parish_from_dawa(data)
 
+    if is_import_new_parish:      
         parish_updates = get_new_parish_from_dawa(data)
         update_parishes(data, parish_updates)
 
