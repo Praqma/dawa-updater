@@ -125,7 +125,7 @@ def get_new_parish_from_dawa(dawa_parish_json = []):
             try:
                 found = SamArea.get(SamArea.areaid == 'SOGN'+e['kode'])
             except DoesNotExist as dne:
-                print("WARNING: Found new area not imported %s" % ("SOGN"+e['kode'])
+                print("WARNING: Found new area not imported %s" % ("SOGN"+e['kode']))
                 added.append('SOGN'+e['kode'])
     return added
 
