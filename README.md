@@ -1,3 +1,7 @@
+---
+maintainer: MadsNielsen
+---
+
 ## dawa-updater
 
 pulls address data from DAWA and pushes it to the RUT database
