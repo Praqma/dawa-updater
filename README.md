@@ -9,6 +9,7 @@ pulls address data from DAWA and pushes it to the RUT database
 ### Setting up the environment
 
 1. start by installing Python 3. On Linux using apt-get and for windows download an installer from their website. It has to version 3 otherwise the application wont run. Add it to the PATH.
+On Linux you will also need the `python3.5-dev` package.
 
 2. Install PIP. `https://pip.readthedocs.org/en/stable/installing/`
 
