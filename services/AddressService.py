@@ -23,7 +23,7 @@ class AddressService:
 
             parish_id_name_map = {}
             for row in reader:
-                parish_id_name_map[row[0]] = row[1]
+                parish_id_name_map[row[1]] = row[2]
 
             reader = csv.reader(parish_address)
             next(reader)  # skip header
