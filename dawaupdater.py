@@ -539,7 +539,7 @@ def main(arguments):
         update_address_information()
         register_update()
 
-    if is_freshimport and not is_parish:
+    if is_freshimport:
         initialize(is_update)
         import_commune_information()
         import_area_information()
