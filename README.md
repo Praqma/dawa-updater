@@ -23,7 +23,7 @@ On Linux you will also need the `python3.5-dev` package.
 
 7. After activating the environment use PIP to install the dependencies by running `$ pip install -r requirements.txt`. If the dependencies have been changed update the requirements file by running `$ pip freeze > requirements.txt`
 
-8. For the application to run it needs information about the database. There are 3 environmental variables that it will look for. `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`.
+8. For the application to run it needs information about the database. There are 4 environmental variables that it will look for. `DATABASE_HOST`, `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`.
 
 ##### How to regenerate the database models
 In case the database schema has changed, the model class needs to be regenerated. 
