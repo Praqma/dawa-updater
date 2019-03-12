@@ -482,6 +482,7 @@ def register_update():
 
     tdata = tempdata.load()
     update = tdata['update_to_register']
+    update.pop('tidspunkt') # The database will set `tidspunkt` to CURRENT_TIMESTAMP on edit
     print(update)
 
     Updates.create(**update)
