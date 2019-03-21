@@ -12,7 +12,7 @@ Usage:
 
 Options:
   -h --help             Show this screen.
-  update-parish         Update database with the new parishes
+  import-new-parish     Update database with the new parishes
   list-obsolete-parish  List obsolete parish
   list-new-parish       List new parish 
   freshimport           Used to establish a fresh local copy of the data
