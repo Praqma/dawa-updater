@@ -535,7 +535,10 @@ def main(arguments):
         response = requests.get(SERVER_URL + 'sogne')
         data = response.json()          
         parish_updates = get_new_parish_from_dawa(data)
-        update_parishes(data, parish_updates)
+        if parish_updates:
+            update_parishes(data, parish_updates)
+        else:
+            print("Nothing have changed!")
 
     if is_update and updates_available():
         initialize(is_update)
