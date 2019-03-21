@@ -257,7 +257,7 @@ def freshimport():
 
             valid_address = True
 
-            address = {'id': row[0], 'kommunekode': row[2], 'vejkode': row[3], 'husnr': row[4], 'postnr': row[6],
+            address = {'id': row[0], 'kommunekode': row[5], 'vejkode': row[6], 'husnr': row[7], 'postnr': row[9],
                        'etrs89koordinat_øst': row[13], 'etrs89koordinat_nord': row[14]}
 
             for v in address.values():
