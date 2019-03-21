@@ -532,6 +532,8 @@ def main(arguments):
         get_new_parish_from_dawa(data)
 
     if is_import_new_parish:      
+        response = requests.get(SERVER_URL + 'sogne')
+        data = response.json()          
         parish_updates = get_new_parish_from_dawa(data)
         update_parishes(data, parish_updates)
 
