@@ -12,3 +12,8 @@
 # idea files #
 .idea/
 *.iml
+
+stderr
+stdout
+tempdata.json
+dawadata

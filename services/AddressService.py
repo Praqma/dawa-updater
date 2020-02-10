@@ -2,6 +2,7 @@ import csv
 from collections import Counter
 import config
 
+
 class AddressService:
     def __init__(self):
         self._ADDRESS_DATA = []
@@ -11,7 +12,10 @@ class AddressService:
 
             doors = []
             for row in reader:
-                doors.append(row[7])
+                try:
+                    doors.append(row[7])
+                except (KeyError, IndexError):
+                    continue
 
             self._ADDRESS_DATA = Counter(doors)
 
@@ -29,7 +33,10 @@ class AddressService:
             next(reader)  # skip header
 
             for row in reader:
-                self._PARISH_DATA[row[0]] = {'kode': row[1], 'navn': parish_id_name_map[row[1]]}
+                try:
+                    self._PARISH_DATA[row[0]] = {'kode': row[1], 'navn': parish_id_name_map[row[1]]}
+                except KeyError:
+                    pass
 
         self._POLITICAL_DATA = {}
         with open(config.POLITICAL_ADDRESS_DATA) as political_address:
@@ -37,7 +44,10 @@ class AddressService:
             next(reader)  # skip header
 
             for row in reader:
-                self._POLITICAL_DATA[row[0]] = row[1]
+                try:
+                    self._POLITICAL_DATA[row[0]] = row[1]
+                except KeyError:
+                    pass
 
     def get_parish_from_adgangsadresseid(self, adgangsadresseid):
         if adgangsadresseid in self._PARISH_DATA:

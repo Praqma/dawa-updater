@@ -37,4 +37,3 @@ PARISH_DATA = '{0}/parish_data.csv'.format(DATA_FILE_FOLDER)
 POLITICAL_ADDRESS_DATA = '{0}/political_address_data.csv'.format(DATA_FILE_FOLDER)
 
 ADDRESS_ACCESS_DATA_UPDATES = '{0}/address_access_data_updates.json'.format(DATA_FILE_FOLDER)
-
