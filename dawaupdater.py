@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 
 """DAWA updater
 
@@ -19,25 +18,23 @@ Options:
   update                Is used for updating the data
 """
 
-from docopt import docopt
-
-import json
 import concurrent.futures
 import csv
+import json
+import os
+import re
+import shutil
 from pprint import pprint
 
-from models import *
-import os
-import peewee
-import re
-import requests
-import pyproj
-from services.VejstykkerService import VejstykkerService
-from services.AddressService import AddressService
-import config
-import shutil
-import tempdata
 import pymysql.err
+import pyproj
+import requests
+from docopt import docopt
+
+import tempdata
+from models import *  # noqa
+from services.AddressService import AddressService
+from services.VejstykkerService import VejstykkerService
 
 wgs84 = pyproj.Proj(init='epsg:4326')
 etrs89 = pyproj.Proj(init='epsg:25832')
@@ -45,7 +42,7 @@ etrs89 = pyproj.Proj(init='epsg:25832')
 vejstykker_service = None
 address_service = None
 
-SERVER_URL = 'http://dawa.aws.dk/'
+SERVER_URL = 'https://dawa.aws.dk/'
 
 
 def import_commune_information():
@@ -62,8 +59,11 @@ def import_commune_information():
 
     print('done.')
 
-#Updates parishes. Takes an Array of parishes in the form SOGNXXXX where XXXX is the parish code
-def update_parishes(dawa_parish_json, parishes = []):
+
+# Updates parishes. Takes an Array of parishes in the form SOGNXXXX where XXXX is the parish code
+def update_parishes(dawa_parish_json, parishes=None):
+    if parishes is None:
+        parishes = []
     print("Updating parishes with new parish data")
     parishmap = {}
     updatelist = []
@@ -71,8 +71,7 @@ def update_parishes(dawa_parish_json, parishes = []):
     for i in range(0, len(dawa_parish_json)):
         parishmap[int(dawa_parish_json[i]['kode'])] = dawa_parish_json[i]
 
-
-    for parish in parishes:        
+    for parish in parishes:
         pString = int(parish[4:8])
         url = SERVER_URL + 'adgangsadresser'
         parameters = {'sognekode': pString, 'side': 1, 'per_side': 1}
@@ -93,6 +92,7 @@ def update_parishes(dawa_parish_json, parishes = []):
     with database.atomic():
         SamArea.insert_many(updatelist).execute()
 
+
 def get_parishes():
     response = requests.get(SERVER_URL + 'sogne')
     data = response.json()
@@ -105,32 +105,35 @@ def get_parishes():
             kommune_id = response.json()[0]['kommune']['kode']
 
         yield {
-        'areacode': int(e['kode']), 
-        'areaname': e['navn'],
-        'areatypeid': 'SOGN', 
-        'kommuneid': int(kommune_id),
-        'areaid': "{0}{1}".format('SOGN', int(e['kode']))
+            'areacode': int(e['kode']),
+            'areaname': e['navn'],
+            'areatypeid': 'SOGN',
+            'kommuneid': int(kommune_id),
+            'areaid': "{0}{1}".format('SOGN', int(e['kode']))
         }
 
     print('done importing parishes')
 
 
-#Calculates the parishes in that are on the webservice but NOT in the database. 
-#This is new parishes we can safely insert
-def get_new_parish_from_dawa(dawa_parish_json = []):
+# Calculates the parishes in that are on the webservice but NOT in the database.
+# This is new parishes we can safely insert
+def get_new_parish_from_dawa(dawa_parish_json=None):
+    if dawa_parish_json is None:
+        dawa_parish_json = []
     print("Finding new parishes")
     added = []
     for e in dawa_parish_json:
         if e['kode']:
             try:
                 found = SamArea.get(SamArea.areaid == 'SOGN'+e['kode'])
-            except DoesNotExist as dne:
+            except peewee.DoesNotExist:
                 print("WARNING: Found new area not imported %s" % ("SOGN"+e['kode']))
                 added.append('SOGN'+e['kode'])
     return added
 
-#Calculates the parises in that are in the database but not on the dawa api
-#These need to be individually evaluted. We can basically just print them to console
+
+# Calculates the parises in that are in the database but not on the dawa api
+# These need to be individually evaluted. We can basically just print them to console
 def get_obsolete_parish():
     print("Finding obsolete parishes")
     renamed = []
@@ -138,13 +141,13 @@ def get_obsolete_parish():
     data = response.json()
     database_rows = SamArea.select().where(SamArea.areaid.contains("SOGN")).execute()
     for dbr in database_rows:
-        found  = False
+        found = False
         for dawadata in data:        
-            if(dawadata['kode'] in dbr.areaid):
+            if dawadata['kode'] in dbr.areaid:
                 found = True                
                 break
         if not found:
-            print("WARNING: Found obsolete area %s - %s" % (dbr.areaid,dbr.areaname))                
+            print("WARNING: Found obsolete area %s - %s" % (dbr.areaid, dbr.areaname))
             renamed.append(dbr.areaid)
     return renamed
 
@@ -186,7 +189,6 @@ def import_area_information():
 
         print('done importing postal districts')
 
-
     def get_electoral_districts():
         response = requests.get(SERVER_URL + 'opstillingskredse')
         data = response.json()
@@ -206,13 +208,13 @@ def import_area_information():
 
 
 def create_houseunit(data):
-    houseunit = {}
-
-    houseunit['adgangsadresse_uuid'] = data['id']
-    houseunit['kommuneid'] = data['kommunekode']
-
-    houseunit['roadid'] = data['vejkode']
-    houseunit['roadname'] = vejstykker_service.get_road_name_from_road_id_and_commune_id(data['vejkode'], data['kommunekode'])
+    houseunit = {
+        'adgangsadresse_uuid': data['id'],
+        'kommuneid': data['kommunekode'],
+        'roadid': data['vejkode'],
+        'roadname': vejstykker_service.get_road_name_from_road_id_and_commune_id(
+            data['vejkode'], data['kommunekode'])
+    }
 
     house_id = data['husnr']
     houseunit['houseid'] = house_id
@@ -257,8 +259,15 @@ def freshimport():
 
             valid_address = True
 
-            address = {'id': row[0], 'kommunekode': row[2], 'vejkode': row[3], 'husnr': row[4], 'postnr': row[6],
-                       'etrs89koordinat_øst': row[13], 'etrs89koordinat_nord': row[14]}
+            address = {
+                'id': row[0],
+                'kommunekode': row[2],
+                'vejkode': row[3],
+                'husnr': row[4],
+                'postnr': row[6],
+                'etrs89koordinat_øst': row[13],
+                'etrs89koordinat_nord': row[14],
+            }
 
             for v in address.values():
                 if not v:
@@ -283,7 +292,7 @@ def update_address_information():
 
         try:
             SamHouseunits.create(**houseunit)
-        except IntegrityError:
+        except peewee.IntegrityError:
             return
 
     def handle_update_event(event):
@@ -295,7 +304,7 @@ def update_address_information():
         try:
             record = SamHouseunits.get(SamHouseunits.adgangsadresse_uuid == houseunit['adgangsadresse_uuid'])
             record.delete_instance()
-        except DoesNotExist:
+        except peewee.DoesNotExist:
             print('record is not found for updates so it will be created')
         except peewee.IntegrityError:
             print("peewee integrity error")
@@ -319,7 +328,7 @@ def update_address_information():
         try:
             record = SamHouseunits.get(SamHouseunits.adgangsadresse_uuid == event['data']['id'])
             record.delete_instance()
-        except DoesNotExist:
+        except peewee.DoesNotExist:
             return
 
     with open(config.ADDRESS_ACCESS_DATA_UPDATES, encoding='utf-8') as jsonfile:
@@ -397,23 +406,23 @@ def initialize(is_update):
 
         return [
             {'filename': config.STREET_DATA,
-             'url': 'http://dawa.aws.dk/replikering/vejstykker?sekvensnummer={0}&format=csv'.format(sekvensnummertil)},
+             'url': 'https://dawa.aws.dk/replikering/vejstykker?sekvensnummer={0}&format=csv'.format(sekvensnummertil)},
 
             {'filename': config.ADDRESS_ACCESS_DATA_UPDATES,
-             'url': 'http://dawa.aws.dk/replikering/adgangsadresser/haendelser?sekvensnummerfra={0}&sekvensnummertil={1}'.format(
+             'url': 'https://dawa.aws.dk/replikering/adgangsadresser/haendelser?sekvensnummerfra={0}&sekvensnummertil={1}'.format(
                  sekvensnummerfra, sekvensnummertil)},
 
             {'filename': config.ADDRESS_DATA,
-             'url': 'http://dawa.aws.dk/replikering/adresser?sekvensnummer={0}&format=csv'.format(sekvensnummertil)},
+             'url': 'https://dawa.aws.dk/replikering/adresser?sekvensnummer={0}&format=csv'.format(sekvensnummertil)},
 
             {'filename': config.PARISH_ADDRESS_DATA,
-             'url': 'http://dawa.aws.dk/replikering/sognetilknytninger?sekvensnummer={0}&format=csv'.format(
+             'url': 'https://dawa.aws.dk/replikering/sognetilknytninger?sekvensnummer={0}&format=csv'.format(
                  sekvensnummertil)},
 
-            {'filename': config.PARISH_DATA, 'url': 'http://dawa.aws.dk/sogne?format=csv'},
+            {'filename': config.PARISH_DATA, 'url': 'https://dawa.aws.dk/sogne?format=csv'},
 
             {'filename': config.POLITICAL_ADDRESS_DATA,
-             'url': 'http://dawa.aws.dk/replikering/opstillingskredstilknytninger?sekvensnummer={0}&format=csv'.format(
+             'url': 'https://dawa.aws.dk/replikering/opstillingskredstilknytninger?sekvensnummer={0}&format=csv'.format(
                  sekvensnummertil)}
         ]
 
@@ -426,23 +435,23 @@ def initialize(is_update):
 
         return [
             {'filename': config.STREET_DATA,
-             'url': 'http://dawa.aws.dk/replikering/vejstykker?sekvensnummer={0}&format=csv'.format(sekvensnummer)},
+             'url': 'https://dawa.aws.dk/replikering/vejstykker?sekvensnummer={0}&format=csv'.format(sekvensnummer)},
 
             {'filename': config.ADDRESS_ACCESS_DATA,
-             'url': 'http://dawa.aws.dk/replikering/adgangsadresser?sekvensnummer={0}&format=csv'.format(
+             'url': 'https://dawa.aws.dk/replikering/adgangsadresser?sekvensnummer={0}&format=csv'.format(
                  sekvensnummer)},
 
             {'filename': config.ADDRESS_DATA,
-             'url': 'http://dawa.aws.dk/replikering/adresser?sekvensnummer={0}&format=csv'.format(sekvensnummer)},
+             'url': 'https://dawa.aws.dk/replikering/adresser?sekvensnummer={0}&format=csv'.format(sekvensnummer)},
 
             {'filename': config.PARISH_ADDRESS_DATA,
-             'url': 'http://dawa.aws.dk/replikering/sognetilknytninger?sekvensnummer={0}&format=csv'.format(
+             'url': 'https://dawa.aws.dk/replikering/sognetilknytninger?sekvensnummer={0}&format=csv'.format(
                  sekvensnummer)},
 
-            {'filename': config.PARISH_DATA, 'url': 'http://dawa.aws.dk/sogne?format=csv'},
+            {'filename': config.PARISH_DATA, 'url': 'https://dawa.aws.dk/sogne?format=csv'},
 
             {'filename': config.POLITICAL_ADDRESS_DATA,
-             'url': 'http://dawa.aws.dk/replikering/opstillingskredstilknytninger?sekvensnummer={0}&format=csv'.format(
+             'url': 'https://dawa.aws.dk/replikering/opstillingskredstilknytninger?sekvensnummer={0}&format=csv'.format(
                  sekvensnummer)}
         ]
 
@@ -520,17 +529,18 @@ def main(arguments):
     is_import_new_parish = arguments['import-new-parish']
     is_update = arguments['update']
     is_freshimport = arguments['freshimport']
+    data = None
 
     if is_obsolete_parish:
         get_obsolete_parish()            
 
     if is_list_new_parish:
-        #Get full list of parish from 
+        # Get full list of parish from
         response = requests.get(SERVER_URL + 'sogne')
-        data = response.json()          
+        data = response.json()
         get_new_parish_from_dawa(data)
 
-    if is_import_new_parish:      
+    if is_import_new_parish and data is not None:
         parish_updates = get_new_parish_from_dawa(data)
         update_parishes(data, parish_updates)
 
@@ -539,7 +549,7 @@ def main(arguments):
         update_address_information()
         register_update()
 
-    if is_freshimport and not is_parish:
+    if is_freshimport and not is_import_new_parish:
         initialize(is_update)
         import_commune_information()
         import_area_information()
