@@ -130,7 +130,7 @@ def get_new_parish_from_dawa(dawa_parish_json=None):
             try:
                 found = SamArea.get(SamArea.areaid == 'SOGN'+e['kode'])
             except peewee.DoesNotExist:
-                log.info("WARNING: Found new area not imported %s" % ("SOGN"+e['kode']))
+                log.warning("Found new area not imported %s" % ("SOGN"+e['kode']))
                 added.append('SOGN'+e['kode'])
     return added
 
@@ -150,7 +150,7 @@ def get_obsolete_parish():
                 found = True                
                 break
         if not found:
-            log.info("WARNING: Found obsolete area %s - %s" % (dbr.areaid, dbr.areaname))
+            log.warning("Found obsolete area %s - %s" % (dbr.areaid, dbr.areaname))
             renamed.append(dbr.areaid)
     return renamed
 
