@@ -402,7 +402,7 @@ def initialize(is_update):
                     logging.info(future.result())
                 except Exception as e:
                     template = 'exception of type {0} occurred. \narguments:\n{1} \nmessage: {2}'
-                    message = template.format(type(e).__name__, e.args, e)
+                    message = template.format(e.__class__.__name__, e.args, e)
                     logging.info(message)
 
     def prepare_update_data_files():
@@ -471,9 +471,9 @@ def initialize(is_update):
     except OSError:
         pass
 
-    # shutil.rmtree(config.DATA_FILE_FOLDER, ignore_errors=True)
-    # os.makedirs(config.DATA_FILE_FOLDER)
-    #
+    shutil.rmtree(config.DATA_FILE_FOLDER, ignore_errors=True)
+    os.makedirs(config.DATA_FILE_FOLDER)
+
     if is_update:
         logging.info('preparing for an update')
         data_files = prepare_update_data_files()
@@ -482,9 +482,9 @@ def initialize(is_update):
         data_files = prepare_data_files_for_initial_import()
 
     logging.info('downloading data files...')
-    pprint(data_files)
-    #
-    # download_data_files(data_files)
+    logging.info(pprint(data_files))
+
+    download_data_files(data_files)
 
     logging.info('done.')
 
