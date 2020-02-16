@@ -12,10 +12,10 @@ class VejstykkerService:
 
             for row in reader:
                 self._STREET_DATA.append({
-                    'kode': row[0],
+                    'kode': row[2],
                     'kommunekode': row[1],
-                    'navn': row[2],
-                    'adresseringsnavn': row[3]
+                    'navn': row[5],
+                    'adresseringsnavn': row[6]
                 })
 
     def get_road_name_from_road_id_and_commune_id(self, road_id, commune_id):

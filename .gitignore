@@ -17,3 +17,5 @@ stderr
 stdout
 tempdata.json
 dawadata
+
+setup.sh
