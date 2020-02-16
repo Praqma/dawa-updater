@@ -26,6 +26,7 @@ import os
 import re
 import shutil
 from pprint import pprint
+from typing import Optional
 
 import pymysql.err
 import pyproj
@@ -45,11 +46,11 @@ address_service = None
 
 SERVER_URL = 'https://dawa.aws.dk/'
 
-log = logging.getLogger("dawa")
+logging.basicConfig(filename='example.log', level=logging.DEBUG)
 
 
 def import_commune_information():
-    log.info('importing commune information...')
+    logging.info('importing commune information...')
 
     def get_communes():
         response = requests.get(SERVER_URL + 'kommuner')
@@ -60,14 +61,14 @@ def import_commune_information():
 
     SamKommune.insert_many(get_communes()).execute()
 
-    log.info('done.')
+    logging.info('done.')
 
 
 # Updates parishes. Takes an Array of parishes in the form SOGNXXXX where XXXX is the parish code
 def update_parishes(dawa_parish_json, parishes=None):
     if parishes is None:
         parishes = []
-    log.info("Updating parishes with new parish data")
+    logging.info("Updating parishes with new parish data")
     parishmap = {}
     updatelist = []
 
@@ -89,11 +90,14 @@ def update_parishes(dawa_parish_json, parishes=None):
             'kommuneid': int(kommune_id),
             'areaid': "{0}{1}".format('SOGN', pString)
         }
-        log.info("Added %s" % new_parish)
+        logging.info("Added %s" % new_parish)
         updatelist.append(new_parish)
 
     with database.atomic():
-        SamArea.insert_many(updatelist).execute()
+        for idx in range(0, len(updatelist), 100):
+            # Insert 100 rows at a time.
+            rows = updatelist[idx:idx + 100]
+            SamArea.insert_many(rows).execute()
 
 
 def get_parishes():
@@ -104,18 +108,19 @@ def get_parishes():
         url = SERVER_URL + 'adgangsadresser'
         parameters = {'sognekode': e['kode'], 'side': 1, 'per_side': 1}
         response = requests.get(url, params=parameters)
+        kommune_id = None  # type: Optional[int]
         if response.json():
-            kommune_id = response.json()[0]['kommune']['kode']
+            kommune_id = int(response.json()[0]['kommune']['kode'])
 
         yield {
             'areacode': int(e['kode']),
             'areaname': e['navn'],
             'areatypeid': 'SOGN',
-            'kommuneid': int(kommune_id),
+            'kommuneid': kommune_id,
             'areaid': "{0}{1}".format('SOGN', int(e['kode']))
         }
 
-    log.info('done importing parishes')
+    logging.info('done importing parishes')
 
 
 # Calculates the parishes in that are on the webservice but NOT in the database.
@@ -123,22 +128,22 @@ def get_parishes():
 def get_new_parish_from_dawa(dawa_parish_json=None):
     if dawa_parish_json is None:
         dawa_parish_json = []
-    log.info("Finding new parishes")
+    logging.info("Finding new parishes")
     added = []
     for e in dawa_parish_json:
         if e['kode']:
             try:
                 found = SamArea.get(SamArea.areaid == 'SOGN'+e['kode'])
             except peewee.DoesNotExist:
-                log.warning("Found new area not imported %s" % ("SOGN"+e['kode']))
-                added.append('SOGN'+e['kode'])
+                logging.warning("Found new area not imported %s" % ("SOGN"+e['kode']))
+                added.append('SOGN' + e['kode'])
     return added
 
 
 # Calculates the parises in that are in the database but not on the dawa api
 # These need to be individually evaluted. We can basically just print them to console
 def get_obsolete_parish():
-    log.info("Finding obsolete parishes")
+    logging.info("Finding obsolete parishes")
     renamed = []
     response = requests.get(SERVER_URL + 'sogne')
     data = response.json()
@@ -150,13 +155,13 @@ def get_obsolete_parish():
                 found = True                
                 break
         if not found:
-            log.warning("Found obsolete area %s - %s" % (dbr.areaid, dbr.areaname))
+            logging.warning("Found obsolete area %s - %s" % (dbr.areaid, dbr.areaname))
             renamed.append(dbr.areaid)
     return renamed
 
 
 def import_area_information():
-    log.info('importing area information...')
+    logging.info('importing area information...')
 
     def get_communes():
         response = requests.get(SERVER_URL + 'kommuner')
@@ -167,7 +172,7 @@ def import_area_information():
                    'areatypeid': 'KOM', 'kommuneid': int(e['kode']),
                    'areaid': "{0}{1}".format('KOM', int(e['kode']))}
 
-        log.info('done importing communes')
+        logging.info('done importing communes')
 
     def get_postal_districts():
         response = requests.get(SERVER_URL + 'postnumre')
@@ -190,7 +195,7 @@ def import_area_information():
                    'areatypeid': 'POST', 'kommuneid': postnr_kommunekode_map[e['nr']],
                    'areaid': "{0}{1}".format('POST', int(e['nr']))}
 
-        log.info('done importing postal districts')
+        logging.info('done importing postal districts')
 
     def get_electoral_districts():
         response = requests.get(SERVER_URL + 'opstillingskredse')
@@ -205,9 +210,9 @@ def import_area_information():
                 'areaid': "{0}{1}".format('VALG', int(e['kode']))
             }
 
-        log.info('done importing electoral districts')
+        logging.info('done importing electoral districts')
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor, database.atomic():
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         executor.submit(SamArea.insert_many(get_communes()).execute())
         executor.submit(SamArea.insert_many(get_postal_districts()).execute())
         executor.submit(SamArea.insert_many(get_parishes()).execute())
@@ -227,10 +232,7 @@ def create_houseunit(data):
     houseunit['houseid'] = house_id
 
     house_number = re.findall(r'\d+', house_id)[0]
-    if int(house_number) % 2 == 0:
-        houseunit['equalno'] = 1
-    else:
-        houseunit['equalno'] = 0
+    houseunit['equalno'] = int(house_number) % 2
 
     x = data['etrs89koordinat_øst']
     y = data['etrs89koordinat_nord']
@@ -246,14 +248,15 @@ def create_houseunit(data):
     houseunit['sognenr'] = parish['kode']
     houseunit['sognenavn'] = parish['navn']
 
-    valgkredskode = address_service.get_political_district_id_from_adgangsadresseid(data['id'])
-    houseunit['valgkreds'] = valgkredskode
+    # IRRELEVANT FOR NOW
+    # valgkredskode = address_service.get_political_district_id_from_adgangsadresseid(data['id'])
+    # houseunit['valgkreds'] = valgkredskode
 
     return houseunit
 
 
 def freshimport():
-    log.info('importing address info')
+    logging.info('importing address info')
 
     with open(config.ADDRESS_ACCESS_DATA, encoding='utf-8') as csvfile:
         reader = csv.reader(csvfile)
@@ -262,7 +265,7 @@ def freshimport():
 
         for index, row in enumerate(reader):
             if index % 50000 == 0:
-                log.info('records read: {0}'.format(index))
+                logging.info('records read: {0}'.format(index))
 
             valid_address = True
 
@@ -285,14 +288,14 @@ def freshimport():
                 houseunit = create_houseunit(address)
                 SamHouseunits.create(**houseunit)
 
-    log.info('done importing address info')
+    logging.info('done importing address info')
 
 
 def update_address_information():
-    log.info('updating address info')
+    logging.info('updating address info')
 
     def handle_insert_event(event):
-        log.info('inserting new record {0}'.format(event['data']['id']))
+        logging.info('inserting new record {0}'.format(event['data']['id']))
 
         data = event['data']
         houseunit = create_houseunit(data)
@@ -303,7 +306,7 @@ def update_address_information():
             return
 
     def handle_update_event(event):
-        log.info('updating record {0}'.format(event['data']['id']))
+        logging.info('updating record {0}'.format(event['data']['id']))
 
         data = event['data']
         houseunit = create_houseunit(data)
@@ -312,25 +315,25 @@ def update_address_information():
             record = SamHouseunits.get(SamHouseunits.adgangsadresse_uuid == houseunit['adgangsadresse_uuid'])
             record.delete_instance()
         except peewee.DoesNotExist:
-            log.info('record is not found for updates so it will be created')
+            logging.info('record is not found for updates so it will be created')
         except peewee.IntegrityError:
-            log.info("peewee integrity error")
+            logging.info("peewee integrity error")
             return
         except pymysql.err.IntegrityError:
-            log.info("pymysql integrity error")
+            logging.info("pymysql integrity error")
             return
         finally:
             try:
                 SamHouseunits.create(**houseunit)
             except peewee.IntegrityError:
-                log.info("peewee integrity error")
+                logging.info("peewee integrity error")
                 return
             except pymysql.err.IntegrityError:
-                log.info("pymysql integrity error")
+                logging.info("pymysql integrity error")
                 return
 
     def handle_delete_event(event):
-        log.info('deleting record {0}'.format(event['data']['id']))
+        logging.info('deleting record {0}'.format(event['data']['id']))
 
         try:
             record = SamHouseunits.get(SamHouseunits.adgangsadresse_uuid == event['data']['id'])
@@ -342,7 +345,7 @@ def update_address_information():
         address_updates = json.loads(jsonfile.read())
 
         for event in address_updates:
-            log.info('event number: {0}'.format(event['sekvensnummer']))
+            logging.info('event number: {0}'.format(event['sekvensnummer']))
 
             valid = True
 
@@ -355,7 +358,7 @@ def update_address_information():
                     valid = False
 
             if not valid:
-                log.info('skipped record {0}'.format(data['id']))
+                logging.info('skipped record {0}'.format(data['id']))
                 continue
 
             event_switcher = {
@@ -367,12 +370,12 @@ def update_address_information():
             event_handler = event_switcher.get(event['operation'])
             event_handler(event)
 
-    log.info('done updating')
+    logging.info('done updating')
 
 
 def initialize(is_update):
     def get_current_update():
-        response = requests.get('http://dawa.aws.dk/replikering/senestesekvensnummer')
+        response = requests.get('https://dawa.aws.dk/replikering/senestesekvensnummer')
         return response.json()
 
     def download_data_files(data_files):
@@ -382,7 +385,7 @@ def initialize(is_update):
                 response = requests.get(file['url'], headers=headers, stream=True)
 
                 if not response.ok:
-                    log.info('file: "{0}"; url: {1}\n {2}'.format(file['filename'], file['url'], response.reason))
+                    logging.info('file: "{0}"; url: {1}\n {2}'.format(file['filename'], file['url'], response.reason))
 
                 for block in response.iter_content(1024):
                     handle.write(block)
@@ -396,17 +399,18 @@ def initialize(is_update):
 
             for future in concurrent.futures.as_completed(futures):
                 try:
-                    log.info(future.result())
+                    logging.info(future.result())
                 except Exception as e:
                     template = 'exception of type {0} occurred. \narguments:\n{1} \nmessage: {2}'
                     message = template.format(type(e).__name__, e.args, e)
-                    log.info(message)
+                    logging.info(message)
 
     def prepare_update_data_files():
         update = get_current_update()
         tempdata.append_or_save({'update_to_register': update})
 
         sekvensnummertil = update['sekvensnummer']
+        logging.info(sekvensnummertil)
 
         update = Updates.select().order_by(Updates.tidspunkt.desc()).limit(1).get()
         sekvensnummerfra = update.sekvensnummer
@@ -467,46 +471,46 @@ def initialize(is_update):
     except OSError:
         pass
 
-    shutil.rmtree(config.DATA_FILE_FOLDER, ignore_errors=True)
-    os.makedirs(config.DATA_FILE_FOLDER)
-
+    # shutil.rmtree(config.DATA_FILE_FOLDER, ignore_errors=True)
+    # os.makedirs(config.DATA_FILE_FOLDER)
+    #
     if is_update:
-        log.info('preparing for an update')
+        logging.info('preparing for an update')
         data_files = prepare_update_data_files()
     else:
-        log.info('preparing for an initial import')
+        logging.info('preparing for an initial import')
         data_files = prepare_data_files_for_initial_import()
 
-    log.info('downloading data files...')
+    logging.info('downloading data files...')
     pprint(data_files)
+    #
+    # download_data_files(data_files)
 
-    download_data_files(data_files)
+    logging.info('done.')
 
-    log.info('done.')
-
-    log.info('starting services...')
+    logging.info('starting services...')
     global vejstykker_service
     vejstykker_service = VejstykkerService()
 
     global address_service
     address_service = AddressService()
-    log.info('done')
+    logging.info('done')
 
 
 def register_update():
-    log.info('registering an update...')
+    logging.info('registering an update...')
 
     tdata = tempdata.load()
     update = tdata['update_to_register']
-    log.info(update)
+    logging.info(update)
 
     Updates.create(**update)
 
-    log.info('done')
+    logging.info('done')
 
 
 def updates_available():
-    log.info('checking for updates...')
+    logging.info('checking for updates...')
 
     response = requests.get('{0}replikering/senestesekvensnummer'.format(SERVER_URL))
     update = response.json()
@@ -516,15 +520,15 @@ def updates_available():
     update = Updates.select().order_by(Updates.tidspunkt.desc()).limit(1).get()
     sekvensnummerfra = int(update.sekvensnummer)
 
-    log.info('sekvensnummerfra: {0}; sekvensnummertil: {1}'.format(sekvensnummerfra, sekvensnummertil))
+    logging.info('sekvensnummerfra: {0}; sekvensnummertil: {1}'.format(sekvensnummerfra, sekvensnummertil))
 
     output = True
 
     if sekvensnummerfra == sekvensnummertil:
-        log.info('no updates found')
+        logging.info('no updates found')
         output = False
     else:
-        log.info('found {0} update events'.format(sekvensnummertil - sekvensnummerfra))
+        logging.info('found {0} update events'.format(sekvensnummertil - sekvensnummerfra))
 
     return output
 
@@ -563,7 +567,7 @@ def main(arguments):
         freshimport()
         register_update()
 
-    log.info('Done using updater')
+    logging.info('Done using updater')
 
 
 if __name__ == '__main__':
