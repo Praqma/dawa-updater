@@ -26,7 +26,6 @@ import os
 import re
 import shutil
 from pprint import pprint
-from typing import Optional
 
 import pymysql.err
 import pyproj
