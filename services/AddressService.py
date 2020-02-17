@@ -1,7 +1,6 @@
 import csv
 import logging
 from collections import Counter
-from typing import List, Dict
 
 import config
 
