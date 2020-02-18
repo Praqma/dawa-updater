@@ -1,3 +1,6 @@
+# coding: utf-8
+
+import codecs
 import csv
 import config
 
@@ -18,7 +21,7 @@ class VejstykkerService:
                     'adresseringsnavn': row[6]
                 })
 
-    def get_road_name_from_road_id_and_commune_id(self, road_id, commune_id):
+    def get_road_name_from_road_id_and_commune_id(self, road_id, commune_id) -> str:
         for street in self._STREET_DATA:
             if street['kode'] == road_id and street['kommunekode'] == commune_id:
                 return street['navn']

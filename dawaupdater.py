@@ -36,8 +36,8 @@ from models import *  # noqa
 from services.AddressService import AddressService
 from services.VejstykkerService import VejstykkerService
 
-wgs84 = pyproj.Proj(init='epsg:4326')
-etrs89 = pyproj.Proj(init='epsg:25832')
+wgs84 = pyproj.Proj('epsg:4326')
+etrs89 = pyproj.Proj('epsg:25832')
 
 vejstykker_service = None
 address_service = None
@@ -166,9 +166,13 @@ def import_area_information():
         data = response.json()
 
         for e in data:
-            yield {'areacode': int(e['kode']), 'areaname': e['navn'],
-                   'areatypeid': 'KOM', 'kommuneid': int(e['kode']),
-                   'areaid': "{0}{1}".format('KOM', int(e['kode']))}
+            yield {
+                'areacode': int(e['kode']),
+                'areaname': e['navn'],
+                'areatypeid': 'KOM',
+                'kommuneid': int(e['kode']),
+                'areaid': "{0}{1}".format('KOM', int(e['kode'])),
+            }
 
         logging.info('done importing communes')
 
@@ -189,9 +193,13 @@ def import_area_information():
             if e['stormodtager']:
                 continue
 
-            yield {'areacode': int(e['nr']), 'areaname': e['navn'],
-                   'areatypeid': 'POST', 'kommuneid': postnr_kommunekode_map[e['nr']],
-                   'areaid': "{0}{1}".format('POST', int(e['nr']))}
+            yield {
+                'areacode': int(e['nr']),
+                'areaname': e['navn'],
+                'areatypeid': 'POST',
+                'kommuneid': postnr_kommunekode_map[e['nr']],
+                'areaid': "{0}{1}".format('POST', int(e['nr']))
+            }
 
         logging.info('done importing postal districts')
 
@@ -223,7 +231,8 @@ def create_houseunit(data):
         'kommuneid': data['kommunekode'],
         'roadid': data['vejkode'],
         'roadname': vejstykker_service.get_road_name_from_road_id_and_commune_id(
-            data['vejkode'], data['kommunekode'])
+            data['vejkode'], data['kommunekode'],
+        )
     }
 
     house_id = data['husnr']

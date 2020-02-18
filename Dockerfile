@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 RUN apt-get update && apt-get install \
-  -y --no-install-recommends python3 python3-virtualenv gcc python3-dev \
+  -y --no-install-recommends python3 python3-virtualenv gcc python3-dev locales \
   && rm -rf /var/lib/apt/lists/*
 
 ENV VIRTUAL_ENV=/usr/local/dawa-updater/
@@ -17,6 +17,9 @@ ENV DATABASE_USER 'sammy'
 ENV DATABASE_PASSWORD 'sammy'
 
 ENV LANG en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+RUN locale-gen en_US.UTF-8
 
 # Install dependencies:
 COPY requirements.txt .

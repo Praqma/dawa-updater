@@ -7,6 +7,7 @@ database = peewee.MySQLDatabase(
     host=config.DATABASE_HOST,
     user=config.DATABASE_USER,
     passwd=config.DATABASE_PASSWORD,
+    charset='latin1',
 )
 
 
