@@ -25,7 +25,6 @@ import logging
 import os
 import re
 import shutil
-from pprint import pprint
 
 import pymysql.err
 import pyproj
@@ -45,7 +44,7 @@ address_service = None
 
 SERVER_URL = 'https://dawa.aws.dk/'
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(filename="dawaupdater.log", level=logging.DEBUG)
 
 
 def import_commune_information():
