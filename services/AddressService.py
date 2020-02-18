@@ -10,7 +10,7 @@ log = logging.getLogger("dawa")
 class AddressService:
     def __init__(self):
         self._ADDRESS_DATA = []
-        with open(config.ADDRESS_DATA) as address_data:
+        with open(config.ADDRESS_DATA, encoding="utf-8") as address_data:
             reader = csv.reader(address_data)  # type: List
             next(reader)  # skip header
 
