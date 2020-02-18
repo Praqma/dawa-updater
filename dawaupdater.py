@@ -46,7 +46,7 @@ address_service = None
 
 SERVER_URL = 'https://dawa.aws.dk/'
 
-logging.basicConfig(filename='example.log', level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 
 def import_commune_information():
@@ -420,11 +420,12 @@ def initialize(is_update):
              'url': 'https://dawa.aws.dk/replikering/vejstykker?sekvensnummer={0}&format=csv'.format(sekvensnummertil)},
 
             {'filename': config.ADDRESS_ACCESS_DATA_UPDATES,
-             'url': 'https://dawa.aws.dk/replikering/adgangsadresser/haendelser?sekvensnummerfra={0}&sekvensnummertil={1}'.format(
-                 sekvensnummerfra, sekvensnummertil)},
+             'url': 'https://dawa.aws.dk/replikering/adgangsadresser/haendelser?'
+                    'sekvensnummerfra={0}&sekvensnummertil={1}'.format(sekvensnummerfra, sekvensnummertil)},
 
             {'filename': config.ADDRESS_DATA,
-             'url': 'https://dawa.aws.dk/replikering/adresser?sekvensnummer={0}&format=csv'.format(sekvensnummertil)},
+             'url': 'https://dawa.aws.dk/replikering/adresser?'
+                    'sekvensnummer={0}&format=csv'.format(sekvensnummertil)},
 
             {'filename': config.PARISH_ADDRESS_DATA,
              'url': 'https://dawa.aws.dk/replikering/sognetilknytninger?sekvensnummer={0}&format=csv'.format(
@@ -433,8 +434,8 @@ def initialize(is_update):
             {'filename': config.PARISH_DATA, 'url': 'https://dawa.aws.dk/sogne?format=csv'},
 
             {'filename': config.POLITICAL_ADDRESS_DATA,
-             'url': 'https://dawa.aws.dk/replikering/opstillingskredstilknytninger?sekvensnummer={0}&format=csv'.format(
-                 sekvensnummertil)}
+             'url': 'https://dawa.aws.dk/replikering/opstillingskredstilknytninger?'
+                    'sekvensnummer={0}&format=csv'.format(sekvensnummertil)}
         ]
 
     def prepare_data_files_for_initial_import():
@@ -482,7 +483,7 @@ def initialize(is_update):
         data_files = prepare_data_files_for_initial_import()
 
     logging.info('downloading data files...')
-    logging.info(pprint(data_files))
+    logging.info(data_files)
 
     download_data_files(data_files)
 
