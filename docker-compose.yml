@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  db:
+    image: mysql:5.5
+    container_name: db
+    environment:
+      MYSQL_ROOT_PASSWORD: secretpw
+      MYSQL_DATABASE: sammy
+      MYSQL_USER: sammy
+      MYSQL_PASSWORD: sammy
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql:/var/lib/mysql
+volumes:
+  mysql:
