@@ -3,6 +3,7 @@ version: '3'
 services:
   db:
     image: mysql:5.5
+    command: --lower-case-table-names=1 --character-set-server=latin1 --collation-server=latin1_swedish_ci
     container_name: db
     environment:
       MYSQL_ROOT_PASSWORD: secretpw
@@ -13,5 +14,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql:/var/lib/mysql
+      - ./etc:/etc/mysql/mysql.conf.d
+      - /home/mads/Downloads/rut:/docker-entrypoint-initdb.d/
 volumes:
   mysql:
