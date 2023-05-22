@@ -1,6 +1,6 @@
 docopt==0.6.2
 peewee==3.13.1
 pyproj==2.4.2.post1
-requests==2.22.0
+requests==2.31.0
 PyMySQL==0.9.3
 python-dateutil==2.8.1
